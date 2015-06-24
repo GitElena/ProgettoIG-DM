@@ -1,3 +1,11 @@
+//============================================================================
+// Name        : MakkaPakka.cpp
+// Author      : 
+// Version     :
+// Copyright   : Your copyright notice
+// Description : Hello World in C++, Ansi-style
+//============================================================================
+
 #include <GL/glut.h>
 #include <iostream>
 #include <time.h>
@@ -6,108 +14,227 @@
 using namespace std;
 
 
-GLfloat poscamx=0.0,poscamy=0.0,posfx=1.0,posfy=0;
+GLfloat poscamx=0.0,poscamy=0.0,posfx=1.0,posfy=0,velocita=0.1,xmax=0,ymax=0,xmin=0,ymin=0;
 
 void init(void) {
-	glClearColor(0.0, 1.0, 0.5, 0.0);
+	glClearColor(1.0, 1.0, 0, 0);
+
 	glShadeModel(GL_FLAT);
 	glEnable(GL_DEPTH_TEST);
-	GLfloat ambientLight[]= { 0.3f , 0.3f , 0.3f , 1.0f};
-		GLfloat diffuseLight[]= { 0.7f , 0.7f , 0.7f , 1.0f };
-		// Enable l i g h t i n g
-		glEnable ( GL_LIGHTING ) ;
-		// Setup and enable l i g h t 0
-		glLightfv( GL_LIGHT0 , GL_AMBIENT , ambientLight);
-		glLightfv( GL_LIGHT0 , GL_DIFFUSE , diffuseLight);
-		glEnable( GL_LIGHT0 );
 
-		// Enable c o l o r t r a c k i n g
-		glEnable(GL_COLOR_MATERIAL) ;
-		// Set M a t e r i a l p r o p e r t i e s t o f o l l o w g l C o l o r v a l u e s
-		glColorMaterial (GL_FRONT, GL_AMBIENT_AND_DIFFUSE ) ;
-
-		GLfloat lightPos[]={0.0f,0.0f,1.0f};
-		glLightfv(GL_LIGHT1,GL_POSITION,lightPos);
-		GLfloat specularLight[] = { 0.2f , 0.2f , 0.2f , 1.0f };
-		glLightfv( GL_LIGHT1 , GL_SPECULAR, specularLight) ;
-		glEnable( GL_LIGHT1 ) ;
-		GLfloat specular[]={0.0f,0.0f,1.0f};
-
-		glLightfv( GL_LIGHT2 , GL_SPECULAR, specular) ;
-		glLightfv( GL_LIGHT2 , GL_POSITION , lightPos ) ;
-		//spotdirectionis(0 ,0 , âˆ’1) by d e f a u l t
-		GLfloat spotDir[]={0.0,0.0,1.0};
-		glLightfv( GL_LIGHT2 , GL_SPOT_DIRECTION , spotDir ) ;
-		// Cut o f f angle i s 50 degrees
-		glLightf( GL_LIGHT2 , GL_SPOT_CUTOFF, 50.0f ) ;
-		// Enable t h i s l i g h t i n p a r t i c u l a r
-		glEnable ( GL_LIGHT2 ) ;
 }
 
-int dim = 20;
-GLfloat delta_alpha = 3,alpha = 0,pgreco=3.14159 ;
+const int dim = 20;
+GLfloat delta_alpha = 5,alpha = 0,pgreco=3.14159 ;
 
 struct Vertice {
-	GLfloat x, y, z;
-} vertici[20][20] = { 0 };
+	GLfloat x, y;
+};
+
+Vertice vertici[dim][dim]={0.0};
 
 GLfloat l = 1.3;
 
 
 void Inizializza() {
-	GLfloat y = -10.0, x = -10.0, z = 0.0;
+	GLfloat y = -10.0, x = -10.0;
 
 	for (int i = 0; i < dim; i++) {
 		for (int j = 0; j < dim; j++) {
 			vertici[i][j].x += x;
+
 			vertici[i][j].y += y;
-			vertici[i][j].z = z;
+
+
 			x = vertici[i][j].x + l;
 		}
 		y = vertici[i][0].y + l;
 		x = -10.0;
 	}
 
-	cout<<"v1 "<<vertici[0][0].x<<vertici[0][0].y<<endl;
-	cout<<"v2 "<<vertici[0][dim-1].x<<vertici[0][dim-1].y<<endl;
-	cout<<"v3 "<<vertici[dim-1][dim-1].x<<vertici[dim-1][dim-1].y<<endl;
-	cout<<"v4 "<<vertici[dim-1][0].x<<vertici[dim-1][0].y<<endl;
+	xmax=vertici[dim-1][dim-1].x;
+	ymax=vertici[dim-1][dim-1].y;
+	xmin=vertici[0][0].x;
+	ymin=vertici[0][0].y;
 
 }
 
-void disegnaPiano() {
-	int b = 0;
-
+void disegnaPiano(string tipo)
+{
+	GLfloat z;
+	((tipo=="tetto")?z=3.0:z=0.0);
 	glBegin(GL_QUADS);
+	glVertex3f(vertici[0][0].x, vertici[0][0].y, z);
+	glVertex3f(vertici[0][dim-1].x, vertici[0][dim-1].y, z);
+	glVertex3f(vertici[dim-1][dim-1].x, vertici[dim-1][dim-1].y,z);
+	glVertex3f(vertici[dim-1][0].x, vertici[dim-1][0].y,z);
+	glEnd();
+}
 
-	for (int i = 0; i < dim - 1; i++) {
-		if (i % 2 == 0)
-			b = 0;
+
+
+int quadrante()
+{
+		if(poscamx>0 && poscamy>0)
+			return 1;
+		else if(poscamx>0 && poscamy<0)
+				return 2;
+		else if(poscamx<0 && poscamy<0)
+				return 3;
+		else if (poscamx<0 && poscamy>0)
+				return 4;
+		return 0;
+	}
+
+void incrementoQ1(GLfloat proxX,GLfloat proxY)
+{	cout<<"quadrante 1"<<endl;
+	if(proxX>xmax-0.7)
+	{	cout<<"la x è maggiore"<<endl;
+		if(proxY<=ymax-0.7)
+			poscamy=proxY;
 		else
-			b = 1;
 
-		for (int j = 0; j < dim - 1; j++) {
-			if (j % 2 == b)
-				glColor3f(1, 1, 1);
+			 if(((proxY-poscamy)>0 || (proxY-poscamy)<0) && (poscamy+(proxY-poscamy)<=ymax))
+			 {	cout<<"entra nell'if della differenza"<<endl;
+				poscamy=poscamy+(proxY-poscamy);
+
+			 }
+
+	}
+	else
+		if(proxY>ymax-0.7)
+		{cout<<"la y è maggiore"<<endl;
+			if(proxX<=xmax-0.7)
+			{
+				poscamx=proxX;
+			}
 			else
-				glColor3f(0, 0, 0);
-
-			glVertex3f(vertici[i][j].x, vertici[i][j].y, vertici[i][j].z);
-			glVertex3f(vertici[i][j + 1].x, vertici[i][j].y, vertici[i][j].z);
-			glVertex3f(vertici[i][j + 1].x, vertici[i + 1][j].y,vertici[i + 1][j].z);
-			glVertex3f(vertici[i][j].x, vertici[i + 1][j].y,vertici[i + 1][j].z);
-
+				if(((proxX-poscamx)< 0 || (proxX-poscamx)> 0) && (poscamx+(proxX-poscamx)<=xmax) )
+				{cout<<"entra nell'if della differenza"<<endl;
+					poscamx=poscamx+(proxX-poscamx);
+				}
 		}
 
+}
+
+void incrementoQ2(GLfloat proxX,GLfloat proxY)
+{	cout<<"quadrante 2"<<endl;
+	if(proxX>xmax-0.7)
+	{cout<<"la x è maggiore"<<endl;
+		if(proxY>=ymin+0.7)
+			poscamy=proxY;
+		else
+			 if(((proxY-poscamy)<0 || (proxY-poscamy)>0) && (poscamy+(proxY-poscamy)>=ymin))
+			 {
+				 cout<<"entra nell'if della differenza"<<endl;
+				poscamy=poscamy+(proxY-poscamy);
+			 }
+	}
+	else
+		if(proxY<ymin+0.7)
+		{	cout<<"la y è minore"<<endl;
+			if(proxX<=xmax-0.7)
+			{
+				poscamx=proxX;
+			}
+			else
+				if(((proxX-poscamx)<0 ||(proxX-poscamx)>0)&& poscamx+(proxX-poscamx)<=xmax)
+				{
+					cout<<"entra nell'if della differenza"<<endl;
+					poscamx=poscamx+(proxX-poscamx);
+				}
 		}
 
-	/*glColor3f(1, 1, 1);
-	glVertex3f(-10, -10, 0);
-	glVertex3f( 10, -10, 0);
-	glVertex3f( 10,  10, 0);
-	glVertex3f(-10,  10, 0);*/
+}
+
+
+void incrementoQ3(GLfloat proxX,GLfloat proxY)
+{
+	cout<<"terzo quadrante"<<endl;
+	if(proxX<xmin+0.7)
+	{cout<<"è più piccola la x"<<endl;
+		if(proxY >= ymin+0.7)
+			poscamy=proxY;
+		else
+			 if(((proxY-poscamy)<0 || (proxY-poscamy)>0)&& poscamy+(proxY-poscamy)>=ymin)
+			 {cout<<"entra nell'if della differenza"<<endl;
+				poscamy=poscamy+(proxY-poscamy);
+			 }
+	}
+	else
+		if(proxY<ymin+0.7)
+		{cout<<"è più piccola la y"<<endl;
+			if(proxX>=xmin+0.7)
+			{
+				poscamx=proxX;
+			}
+			else
+				if(((proxX-poscamx)<0 || (proxX-poscamx)>0) && poscamx+(proxX-poscamx)>=xmin)
+				{
+					cout<<"entra nell'if della differenza"<<endl;
+					poscamx=poscamx+(proxX-poscamx);
+				}
+		}
+
+}
+
+void incrementoQ4(GLfloat proxX,GLfloat proxY)
+{cout<<"quarto quadrante"<<endl;
+	if(proxX<xmin+0.7)
+	{ cout<<"è più piccola la x"<<endl;
+		if(proxY<=ymax-0.7)
+			poscamy=proxY;
+		else
+			 if(((proxY-poscamy)<0 || (proxY-poscamy)>0) && poscamy+(proxY-poscamy)<=ymax)
+			 {
+				 cout<<"entra nell'if della differenza"<<endl;
+				poscamy=poscamy+(proxY-poscamy);
+			 }
+	}
+	else
+		if(proxY>ymax-0.7)
+		{cout<<"è più grande la y"<<endl;
+			if(proxX>=xmin+0.7)
+			{
+				poscamx=proxX;
+			}
+			else
+				if(((proxX-poscamx)<0 || (proxX-poscamx)>0)&&poscamx+(proxX-poscamx)>=xmin)
+				{
+					cout<<"entra nell'if della differenza"<<endl;
+					poscamx=poscamx+(proxX-poscamx);
+				}
+		}
+
+}
+
+void disegnaParete(int a,int b,string parete)
+{
+	int c;
+	((parete=="d_s")?c=b:c=a);
+	glBegin(GL_QUADS);
+	glVertex3f(vertici[a][b].x,vertici[a][b].y,0.0);
+	glVertex3f(vertici[a][b].x,vertici[a][b].y,3.0);
+	glVertex3f(vertici[c][c].x,vertici[c][c].y,3.0);
+	glVertex3f(vertici[c][c].x,vertici[c][c].y,0.0);
+
 
 	glEnd();
+}
+void disegnaStanza() {
+
+
+	glColor3f(1, 0, 0);
+	disegnaPiano("tetto");
+	disegnaPiano("pavimento");
+	glColor3f(1, 1, 0);
+	disegnaParete(0,dim-1,"d_s");//d_s indica parete destra e sinistra
+	glColor3f(1, 1, 1);
+	disegnaParete(dim-1,0,"d_s");
+	glColor3f(0, 1, 1);
+	disegnaParete(dim-1,0,"s_i");
+	glColor3f(1, 0, 1);
+	disegnaParete(0,dim-1,"s_i");
 
 }
 
@@ -117,10 +244,11 @@ void display(void) {
 	glPushMatrix();
 
 	gluLookAt(poscamx, poscamy, 1.0,
-		  posfx,   posfy,   1.0,
-		  0,       0,       1.0);
+		      posfx,   posfy,   1.0,
+		      0.0,       0.0,   1.0);
 
-	disegnaPiano();
+	disegnaStanza();
+
 
 	glPopMatrix();
 
@@ -151,19 +279,68 @@ void keyboard(unsigned char key, int x, int y) {
 		break;
 
 	case 'w':
-		if( (( ( poscamx+0.5*cos((alpha*pgreco)/180) ) >-10 ) && ((poscamy+0.5*sin((alpha*pgreco)/180)) >-10) ) &&
-				(( ( poscamy+0.5*sin((alpha*pgreco)/180) ) < 14.5 ) && ( ( poscamx+0.5*cos((alpha*pgreco)/180) )<14.5))    )
-		{poscamx=poscamx+0.5*cos((alpha*pgreco)/180);
-		poscamy=poscamy+0.5*sin((alpha*pgreco)/180);
+		GLdouble proxX;
+		proxX=poscamx + velocita * cos((alpha * pgreco) / 180);
+		GLdouble proxY;
+		proxY=poscamy + velocita * sin((alpha * pgreco) / 180);
+		if (((proxX > (vertici[0][0].x +0.7 )) && (proxY > vertici[0][0].y +0.7))
+			&& ((proxY < (vertici[dim - 1][dim - 1].y-0.7)) && (proxX < (vertici[dim - 1][dim - 1].x -0.7))))
+						{
+							poscamx = proxX;
+							poscamy = proxY;
+						}
+		else
+			{
+				if(quadrante()==1)
+				{
+					incrementoQ1(proxX,proxY);
+				}
+				else if(quadrante()==2)
+					{
+						incrementoQ2(proxX,proxY);
+					}
+
+				else if(quadrante()==3)
+						{
+							incrementoQ3(proxX,proxY);
+						}
+
+				else if(quadrante()==4)
+							{
+								incrementoQ4(proxX,proxY);
+							}
+			}
+
+				posfx = poscamx + cos((alpha * pgreco) / 180);
+				posfy = poscamy + sin((alpha * pgreco) / 180);
+
+				glutPostRedisplay();
+
+		/*if( (( ( poscamx+0.1*cos((alpha*pgreco)/180) ) >(vertici[0][0].x-0.5) ) && ((poscamy+0.1*sin((alpha*pgreco)/180)) >vertici[0][0].y-0.5) ) &&
+				(( ( poscamy+0.1*sin((alpha*pgreco)/180) ) < (vertici[dim-1][dim-1].y-0.5)) && ( ( poscamx+0.1*cos((alpha*pgreco)/180) )<(vertici[dim-1][dim-1].x-0.5)))    )
+		{poscamx=poscamx+0.1*cos((alpha*pgreco)/180);
+		poscamy=poscamy+0.1*sin((alpha*pgreco)/180);
 		posfx=poscamx+cos((alpha*pgreco)/180);
 		posfy=poscamy+sin((alpha*pgreco)/180);}
-		glutPostRedisplay();
+		else if( poscamx+((poscamx-0.1*cos(alpha*pgreco)/180)-poscamx)*cos((alpha*pgreco)/180)>0 ){
+			poscamx=poscamx+((poscamx-0.1*cos(alpha*pgreco)/180)-poscamx)*cos((alpha*pgreco)/180);
+			poscamy=poscamy+((poscamy-0.1*sin((alpha*pgreco)/180))-poscamy)*sin((alpha*pgreco)/180);
+
+			posfx=poscamx+cos((alpha*pgreco)/180);
+			posfy=poscamy+sin((alpha*pgreco)/180);
+
+		}
+
+
+		glutPostRedisplay();*/
 		break;
 	case's':
-		poscamx=poscamx-0.5*cos((alpha*pgreco)/180);
+		if( (( ( poscamx-0.5*cos((alpha*pgreco)/180) ) >-9.5 ) && ((poscamy-0.5*sin((alpha*pgreco)/180)) >-9.5) ) &&
+						(( ( poscamy-0.5*sin((alpha*pgreco)/180) ) < 14 ) && ( ( poscamx-0.5*cos((alpha*pgreco)/180) )<14))    )
+		{poscamx=poscamx-0.5*cos((alpha*pgreco)/180);
 				poscamy=poscamy-0.5*sin((alpha*pgreco)/180);
 				posfx=poscamx+cos((alpha*pgreco)/180);
-				posfy=poscamy+sin((alpha*pgreco)/180);
+				posfy=poscamy+sin((alpha*pgreco)/180);}
 		glutPostRedisplay();
 		break;
 
@@ -172,6 +349,8 @@ void keyboard(unsigned char key, int x, int y) {
 		break;
 
 	}
+	cout<<"posizione x camera "<<poscamx<<endl;
+	cout<<"posizione y camera "<<poscamy<<endl;
 }
 void reshape(int w, int h) {
 	glViewport(0, 0, (GLsizei) w, (GLsizei) h);
@@ -190,18 +369,18 @@ int main(int argc, char** argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowPosition(0, 0);
-	glutInitWindowSize(1500, 1500);
+	glutInitWindowSize(1350, 710);
 	glutCreateWindow("LA PERFEZIONE FATTA PIANO");
 	init();
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
-
+	/*cout<<"x 0 0 e y 0 0 "<<vertici[0][0].x<<" "<<vertici[0][0].y<<endl;
+	cout<<"x dim dim y "<<vertici[dim-1][dim-1].x<<" "<<vertici[dim-1][dim-1].y<<endl;
+	cout<<"x 0 dim y "<<vertici[0][dim-1].x<<" "<<vertici[0][dim-1].y<<endl;
+	cout<<"x dim 0 y "<<vertici[dim-1][0].x<<" "<<vertici[dim-1][0].y<<endl;*/
 	glutReshapeFunc(reshape);
 	glutMainLoop();
 
 	return 0;
 }
-
-
-
 
