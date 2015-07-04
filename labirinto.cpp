@@ -568,7 +568,7 @@ void leggiMatrice() {
 		}
 	}
 
-	file.close();
+	//file.close();
 	cout << "oss" << posOsservatoreY << posOsservatoreX;
 	cout << "Targ" << posTargetY << posTargetX;
 	for (unsigned int i = 0; i < dim; i++) {
