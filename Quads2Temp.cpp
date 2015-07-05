@@ -14,44 +14,77 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
+
 #include <GL/glut.h>
+
+#define GL_GLEXT_LEGACY      //should prevent old glext.h from being included
+#define GL_GLEXT_PROTOTYPES  //should make glActiveTexture be defined
+#define GL_ACTIVE_TEXTURE                 0x84E0
+#include <GL/glext.h>
 #include <iostream>
 #include <time.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string>
 #include <fstream>
+#include "tga.h"
 using namespace std;
 int h = 0;
 GLfloat poscamx = 0.0, poscamy = 0.0, posfx = 1.0, posfy = 0, poscamz = 1.0,
 		posfz = 1.0; //look at
-GLfloat di = 1.5, dis = 0;
+GLfloat di = 1, dis = 0,dif=0.5;
 GLfloat traslazionex = 0.0, traslazioney = 0.0; //2d
 GLfloat varianza = -10.0; //matrice grande
 bool alto = false, modalitaSemplice = false, prima = false, seconda = false,
 		win = false;
 unsigned int labx, laby; //collisioni 2d
-unsigned int posOsservatoreX, posOsservatoreY, posTargetX, posTargetY,posFantasmaX=3,posFantasmaY=3;
+int posOsservatoreX, posOsservatoreY, posTargetX, posTargetY,posFantasmaX=3,posFantasmaY=3;
 const int dim = 40;
-GLfloat delta_alpha = 3, alpha = 0, pgreco = 3.14159;
+GLfloat delta_alpha = 3, alpha = 0, pgreco = 3.14159, alphaCubo=0,delta_alpha_cubo=1;
 int labirinto[dim][dim] = { 3 };
 GLfloat velocita = 0.1;
 int rotate = 0;
+bool ing=false;
+const int numTex=6;
+GLuint  textures[numTex];
+const char *textureFile[numTex] = { "src\\erba1.tga", "src\\muroGrigio.tga","src\\stella.tga","src\\cassa.tga","src\\cubo3.tga","src\\Fantasmino2.tga"};
+const int tempTot=300;
+int tempRimanente=tempTot;
+GLfloat lunghezzaBarra=18.0;
+GLfloat decrementoBarra=(lunghezzaBarra/tempTot)*2;
+bool gioco=true,presoFantasma=false;
+
+GLfloat x1=0,x2=0,x3=0,x4=0;
+
+GLfloat yh1=0,yh2=0,yh3=0,yh4=0;
+
 GLfloat ambientLight [] = { 0 , 0 , 3 , 1.0f };
 GLfloat coloreLuceAmbiente[] = { 0.5, 0.5, 0.5, 1.0f };
-GLfloat luceDiffusa[] = { 1, 1, 1, 1.0 };
-GLfloat luceSpeculare[] = { 2, 2, 2, 1.0 };
-GLfloat reflex[] = { 100.0 };
-GLfloat rouge[] = { 0.2, 0.2, 0.2, 1.0 };
+//GLfloat coloreLuceAmbiente[] = { 0.0, 0.0, 0.0, 0.5f };
+GLfloat luceDiffusa[] = { 0.5, 0.5, 0.5, 1.0 };
+GLfloat luceSpeculare[] = { 0.5, 0.5, 0.5, 1.0 };
+GLfloat reflex[] = { 50.0 };
+GLfloat grigioBello[] = { 0.2, 0.2, 0.2, 1.0 };
+GLfloat marrone[]= { 0.2, 0.2, 0.0, 1.0 };
+GLfloat senape[]= { 0.4, 0.4, 0.0, 1.0 };
+GLfloat rouge[]= { 0.5, 0.1, 0.0, 1.0 };
 GLfloat Speculare[] = { 0, 0, 0, 1.0 };
 GLfloat nero[] = { 0, 0, 0, 1 };
-
 GLfloat bianco[] = { 1, 1, 1, 1 };
 GLfloat verde[] = { 0, 1, 0, 1 };
 GLfloat grigio[] = { 1, 0, 1, 1 };
 //GLfloat coloreNebbia[] = { 0.3, 0.3, 0.3, 1 };
-GLfloat coloreNebbia[] = { 0.4, 0.4, 0.4, 0 };
-GLfloat PosLuceAmbiente[] = { 0, 0, 0, 1.0 };
+GLfloat coloreNebbia[] = { 0.6, 0.6, 0.6, 0 };
+GLfloat PosLuceAmbiente[] = {10, 10,4, 1.0 };
+
+
+GLfloat PosLuceAmbienteF[] = {-10, -10,2, 1.0 };
+GLfloat PosLuceAmbiente2[] = { 40, 40,10, 1.0 };
+void ingFantasma();
+void collisioneFantasma();
+void preso();
+
+
 
 struct Vertice {
 	GLfloat x, y;
@@ -63,20 +96,25 @@ Vertice verticiGrandi[dim][dim] = { 0.0 };
 GLfloat l = 1;
 
 void init(void) {
-	glClearColor(1.0, 1.0, 1.0, 0);
+	glClearColor(0.6, 0.6, 0.6, 0);
 
 	glEnable(GL_LIGHTING);
 
 		glLightfv(GL_LIGHT0, GL_AMBIENT, coloreLuceAmbiente);
-		GLfloat diffuseLight [] = { 0.7f , 0.7f , 0.7f , 1.0f };
-		glLightfv (GL_LIGHT0,GL_DIFFUSE, diffuseLight ) ;
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, luceDiffusa);
 		glLightfv(GL_LIGHT0, GL_SPECULAR, luceSpeculare);
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbiente);
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbiente);
+
 		glEnable(GL_LIGHT0);
+
+//		glLightfv(GL_LIGHT1, GL_DIFFUSE, luceDiffusa);
+//		glLightfv(GL_LIGHT1, GL_SPECULAR, luceSpeculare);
+//		glEnable(GL_LIGHT1);
+
+
 		glFogfv(GL_FOG_COLOR, coloreNebbia);
-		glFogf(GL_FOG_START,3);
-		glFogf(GL_FOG_END, 8);
+		glFogf(GL_FOG_START,-2);
+		glFogf(GL_FOG_END, 11);
 		glFogi(GL_FOG_MODE, GL_LINEAR);
 		glEnable(GL_FOG);
 
@@ -84,6 +122,58 @@ void init(void) {
 	glShadeModel(GL_FLAT);
 	glEnable(GL_DEPTH_TEST);
 
+}
+
+void texture()
+{
+			GLbyte *pBytes;
+		    GLint iWidth, iHeight, iComponents;
+		    GLenum eFormat;
+		    GLubyte i;
+
+		   	glEnable(GL_TEXTURE_2D);
+		   	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		    glGenTextures(numTex, textures);
+
+		    	// Load texture
+		    	for ( i= 0; i < numTex; i++)
+		    	{
+
+		    		//glActiveTexture(GL_TEXTURE0);
+		    		glBindTexture(GL_TEXTURE_2D, textures[i]);
+
+		    		// glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+		    		pBytes = gltLoadTGA(textureFile[i], &iWidth, &iHeight, &iComponents, &eFormat);
+		    		glTexImage2D(GL_TEXTURE_2D, 0, iComponents, iWidth, iHeight, 0, eFormat, GL_UNSIGNED_BYTE, pBytes);
+
+		    		free(pBytes);
+		    		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		    		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		    		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		    		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,  GL_REPEAT);
+
+		    	}
+
+
+
+
+}
+
+void Timer(int sec)
+{
+
+	if(tempRimanente>0)
+	{	tempRimanente--;
+	lunghezzaBarra-=decrementoBarra;}
+	else gioco=false;
+
+	if(tempRimanente==30)
+	{
+			glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbienteF);
+				glFogfv(GL_FOG_COLOR, rouge);
+	}
+	glutTimerFunc(sec,Timer,sec);
 }
 
 void muoviFantasma()
@@ -135,6 +225,7 @@ void muoviFantasma()
 		default:
 			break;
 
+
 	}
 //	if(!labirinto[posFantasmaY+1][posFantasmaX+1])
 //	{
@@ -157,24 +248,11 @@ void muoviFantasma()
 //					posFantasmaY--;
 }
 
-void stampaFantasma()
-{
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, bianco);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
-	glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
-	glPushMatrix();
-	glTranslatef(verticiGrandi[posFantasmaY][posFantasmaX].x,verticiGrandi[posFantasmaY][posFantasmaX].y,l/2);
-	glutSolidSphere(l/2,200,200);
-	glPopMatrix();
-	//glutPostRedisplay();
-}
 
-void fantasma()
-{
 
-	muoviFantasma();
 
-}
+
+
 
 GLdouble coordinate(int x) {
 	return x + varianza;
@@ -202,23 +280,33 @@ double lastY() {
 	return (poscamy - velocita * sin((alpha * pgreco) / 180));
 }
 GLfloat nextnextX(){
-	return ((poscamx + 12*(velocita * cos((alpha * pgreco) / 180))));
+	return ((poscamx + 10*(velocita * cos((alpha * pgreco) / 180))));
 }
 GLfloat nextnextY(){
-	return (poscamy + 12*(velocita * sin((alpha * pgreco) / 180)));
+	return (poscamy + 10*(velocita * sin((alpha * pgreco) / 180)));
 }
 bool collisioneCuboF() {
-	GLfloat vary=0,varx=0;
-
-	((nextY()<poscamy)?vary=-0.7:vary=+0.7);
-	if(nextY()==poscamy)
-		vary=0;
-	((nextX()<poscamx)?varx=-0.7:varx=+0.7);
-	if(nextX()==poscamx)
-			varx=0;
-	cout<<labirinto[indice(nextnextY())][indice(nextnextX())]<<endl;
+//	GLfloat vary=0,varx=0;
+//
+//	((nextY()<poscamy)?vary=-0.7:vary=+0.7);
+//	if(nextY()==poscamy)
+//		vary=0;
+//	((nextX()<poscamx)?varx=-0.7:varx=+0.7);
+//	if(nextX()==poscamx)
+//			varx=0;
+	//cout<<labirinto[indice(nextnextY())][indice(nextnextX())]<<endl;
 	if (labirinto[indice(nextnextY())][indice(nextnextX())] == 1)
 		return true;
+	if (labirinto[indice(nextnextY())][indice(nextnextX()+l/2)] == 1)
+			return true;
+	if (labirinto[indice(nextnextY()+l/2)][indice(nextnextX())] == 1)
+			return true;
+	if (labirinto[indice(nextnextY()-l/2)][indice(nextnextX())] == 1)
+			return true;
+	if (labirinto[indice(nextnextY())][indice(nextnextX()-l/2)] == 1)
+			return true;
+//	if(labirinto[indice(nextY()+vary)][indice(nextX()+varx)]==1)
+//		return true;
 	return false;
 }
 bool collisioneCuboC() {
@@ -226,24 +314,82 @@ bool collisioneCuboC() {
 		return true;
 	return false;
 }
+bool collisione45Gradi(){
+	if(indice(poscamx+velocita)==indice(nextX())){
+		if(indice(poscamy+velocita)==indice(nextY())){
+			if(labirinto[indice(poscamy+velocita)][indice(poscamx+velocita)]==1)
+				return true;
+		}
+		if(indice(poscamy-velocita)==indice(nextY())){
+			if(labirinto[indice(poscamy-velocita)][indice(poscamx+velocita)]==1){
+				return true;
+			}
+		}
+	}
+	if(indice(poscamx-velocita)==indice(nextX())){
+			if(indice(poscamy+velocita)==indice(nextY())){
+				if(labirinto[indice(poscamy+velocita)][indice(poscamx-velocita)]==1)
+					return true;
+			}
+			if(indice(poscamy-velocita)==indice(nextY())){
+				if(labirinto[indice(poscamy-velocita)][indice(poscamx-velocita)]==1)
+			       return true;
+
+
+			}
+		}
+
+return false;}
 bool collisioneCuboDA() {
-	if (labirinto[indice(lastY() + l)][indice(nextX() + (l))] == 1)
+	if (labirinto[indice(nextY() + l)][indice(nextX() + (l))] == 1)
 		return true;
+//	if (labirinto[indice(nextY() + l-l/3)][indice(nextX() + (l))] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() + l)][indice(nextX() + (l)-l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() + l)][indice(nextX() + (l)+l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() + l+l/3)][indice(nextX() + (l))] == 1)
+//			return true;
 	return false;
 }
 bool collisioneCuboSA() {
-	if (labirinto[indice(lastY() + (l))][indice(nextX() - (l))] == 1)
+	if (labirinto[indice(nextY() + (l))][indice(nextX() - (l))] == 1)
 		return true;
+//	if (labirinto[indice(nextY() + (l)+l/3)][indice(nextX() - (l))] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() + (l))][indice(nextX() - (l)+l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() + (l)-l/3)][indice(nextX() - (l))] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() + (l))][indice(nextX() - (l)-l/3)] == 1)
+//			return true;
 	return false;
 }
 bool collisioneCuboDB() {
-	if (labirinto[indice(lastY() - (l))][indice(nextX() + (l))] == 1)
+	if (labirinto[indice(nextY() - (l))][indice(nextX() + (l))] == 1)
 		return true;
+//	if (labirinto[indice(nextY() - (l))][indice(nextX() + (l)+l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() - (l)-l/3)][indice(nextX() + (l))] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() - (l))][indice(nextX() + (l)-l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() - (l)+l/3)][indice(nextX() + (l))] == 1)
+//			return true;
 	return false;
 }
 bool collisioneCuboSB() {
-	if (labirinto[indice(lastY() - (l))][indice(nextX() - (l))] == 1)
+	if (labirinto[indice(nextY() - (l))][indice(nextX() - (l))] == 1)
 		return true;
+//	if (labirinto[indice(nextY() - (l)+l/3)][indice(nextX() - (l))] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() - (l))][indice(nextX() - (l)+l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() - (l))][indice(nextX() - (l)-l/3)] == 1)
+//			return true;
+//	if (labirinto[indice(nextY() - (l)-l/3)][indice(nextX() - (l))] == 1)
+//			return true;
 	return false;
 }
 
@@ -360,11 +506,142 @@ bool collisioneCuboS() {
 	return false;
 
 }
+
 bool collisioneCuboLaterale() {
 
 	return collisioneCuboDA()||collisioneCuboSA()||collisioneCuboDB()||collisioneCuboSB();
 
 
+}
+
+void rimpFantasma()
+{
+	if (dif > 0.2) {
+			dif -= 0.005;
+			//glutSolidSphere(dif,200,200);
+
+			}
+	else{
+		muoviFantasma();
+		ing=true;
+	}
+
+
+}
+
+void setIngFalse(int sec){
+	ing=false;
+	glutTimerFunc(sec, setIngFalse, sec);
+}
+
+
+void stampaFantasma()
+{
+
+	glPushMatrix();
+
+	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, rouge);
+//	glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
+//	glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
+
+
+	glTranslatef(verticiGrandi[posFantasmaY][posFantasmaX].x,verticiGrandi[posFantasmaY][posFantasmaX].y,l);
+	glBindTexture(GL_TEXTURE_2D, textures[5]);
+	GLUquadric * q= gluNewQuadric();
+	gluQuadricTexture(q,true);
+	gluSphere(q,dif,200,200);
+
+	if(!ing)
+	rimpFantasma();
+	else{
+
+		ingFantasma();
+	}
+
+	glPopMatrix();
+
+}
+void ingFantasma(){
+	if (dif < l/2){
+			dif += 0.005;
+			//glutSolidSphere(dif, 200, 200);
+
+	}
+	else{
+		if(presoFantasma)
+					preso();
+		else
+			collisioneFantasma();
+
+
+
+
+	}
+	}
+void preso()
+{
+	if(!(indice(poscamy)==posOsservatoreY && indice(poscamx)==posOsservatoreX))
+	{
+		if(indice(poscamy)<posOsservatoreY && (indice(poscamy)!=posOsservatoreY ))
+			poscamy=verticiGrandi[indice(poscamy)+1][0].y;
+
+		else
+			if((indice(poscamy)!=posOsservatoreY ))
+			poscamy=verticiGrandi[indice(poscamy)-1][0].y;
+
+		if(indice(poscamx)<posOsservatoreX && (indice(poscamx)!=posOsservatoreX ))
+			poscamx=verticiGrandi[0][indice(poscamx)+1].x;
+
+				else
+					if((indice(poscamx)!=posOsservatoreX ))
+					poscamx=verticiGrandi[0][indice(poscamx)-1].x;
+
+		presoFantasma=true;
+	}
+	else{
+		presoFantasma=false;
+		gioco=true;
+
+		posfx = poscamx + cos((alpha * pgreco) / 180);
+					posfy = poscamy + sin((alpha * pgreco) / 180);
+					if(alto)
+					{
+					traslazionex = verticiGrandi[indice(poscamy)][indice(poscamx)].x;
+								traslazioney = verticiGrandi[indice(poscamy)][indice(poscamx)].y;
+								labx = indice(traslazionex);
+								laby = indice(traslazioney);
+					}
+					//glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbiente);
+							glFogfv(GL_FOG_COLOR, coloreNebbia);
+
+	}
+
+
+
+
+}
+void collisioneFantasma(){
+	if(!alto)
+	{
+	if(posFantasmaX-(indice(poscamx))<=1&&posFantasmaX-indice(poscamx)>=-1&&
+			(posFantasmaY-indice(poscamy)<=1&&posFantasmaY-indice(poscamy)>=-1))
+		{gioco=false;
+		//glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbienteF);
+		glFogfv(GL_FOG_COLOR, rouge);
+		preso();}
+	}
+	else
+	{
+		if(posFantasmaX-(indice(poscamx))<=0.7&&posFantasmaX-indice(poscamx)>=-0.7&&
+			(posFantasmaY-indice(poscamy)<=0.7&&posFantasmaY-indice(poscamy)>=-0.7))
+		{gioco=false;
+				preso();}
+	}
+
+//	else
+//		if(presoFantasma)
+//		gioco=true;
+//			presoFantasma=false;
 }
 
 
@@ -395,24 +672,93 @@ void Inizializza() {
 
 void disegnaPiano(string tipo) {
 	GLfloat z;
-	((tipo == "tetto") ? z = 5.0 : z = 0.0);
-	glBegin(GL_QUADS);
-	glVertex3f(verticiGrandi[0][0].x, verticiGrandi[0][0].y, z);
-	glVertex3f(verticiGrandi[0][dim - 1].x, verticiGrandi[0][dim - 1].y, z);
-	glVertex3f(verticiGrandi[dim - 1][dim - 1].x,
-			verticiGrandi[dim - 1][dim - 1].y, z);
-	glVertex3f(verticiGrandi[dim - 1][0].x, verticiGrandi[dim - 1][0].y, z);
-	glEnd();
+	int g;
+	((tipo == "tetto") ? z = 4.0 : z = 0.0);
+	((tipo == "tetto") ? g=2 : g=0);
+	glBindTexture(GL_TEXTURE_2D, textures[g]);
+//	glBindTexture(GL_TEXTURE_2D, textures[g]);
+	//if(tipo!="tetto")
+	for(int q=0;q<dim;q++)
+	{
+		for(int p=0;p<dim;p++)
+		{
+			if(labirinto[q][p]!=1){
+					glBegin(GL_QUADS);
+					glTexCoord2f(0,0);
+					glVertex3f(verticiGrandi[q][p].x-l/2,verticiGrandi[q][p].y-l/2,z);
+					glTexCoord2f(1,0);
+					glVertex3f(verticiGrandi[q][p].x+l/2,verticiGrandi[q][p].y-l/2,z);
+					glTexCoord2f(1,1);
+					glVertex3f(verticiGrandi[q][p].x+l/2,verticiGrandi[q][p].y+l/2,z);
+					glTexCoord2f(0,1);
+					glVertex3f(verticiGrandi[q][p].x-l/2,verticiGrandi[q][p].y+l/2,z);
+
+
+					glEnd();
+
+//			glBegin(GL_QUADS);
+//			glTexCoord2f(0,0);
+//			glVertex3f(verticiGrandi[q][p].x, verticiGrandi[q][p].y, z);
+//			glTexCoord2f(0,1);
+//			glVertex3f(verticiGrandi[q][p+ 1].x, verticiGrandi[q][p+1].y, z);
+//			glTexCoord2f(1,1);
+//			glVertex3f(verticiGrandi[q+1][p+1].x, verticiGrandi[q+ 1][p+ 1].y, z);
+//			glTexCoord2f(1,0);
+//			glVertex3f(verticiGrandi[q+ 1][p].x, verticiGrandi[q+ 1][p].y, z);
+//			glEnd();
+//		}
+
+			}
+	}
+	}
+//	else
+//		{
+//		glBegin(GL_QUADS);
+//					glTexCoord2f(0,0);
+//					glVertex3f(verticiGrandi[0][0].x, verticiGrandi[0][0].y, z);
+//					glTexCoord2f(0,1);
+//					glVertex3f(verticiGrandi[0][dim-1].x, verticiGrandi[0][dim-1].y, z);
+//					glTexCoord2f(1,1);
+//					glVertex3f(verticiGrandi[dim-1][dim-1].x, verticiGrandi[dim-1][dim-1].y, z);
+//					glTexCoord2f(1,0);
+//					glVertex3f(verticiGrandi[dim-1][0].x, verticiGrandi[dim-1][0].y, z);
+//					glEnd();
+//		}
 }
 
-void disegnaParete(float a1, float a2,float b, string parete,GLfloat z) {
+//	glBegin(GL_QUADS);
+//	glTexCoord2f(0,0);
+//	glVertex3f(verticiGrandi[dim/2-1][dim/2-1].x, verticiGrandi[dim/2-1][dim/2-1].y, z);
+//	glTexCoord2f(0,1);
+//	glVertex3f(verticiGrandi[dim/2-1][dim - 1].x, verticiGrandi[dim/2-1][dim - 1].y, z);
+//	glTexCoord2f(1,1);
+//	glVertex3f(verticiGrandi[dim - 1][dim - 1].x, verticiGrandi[dim - 1][dim - 1].y, z);
+//		glTexCoord2f(1,0);
+//		glVertex3f(verticiGrandi[dim - 1][dim/2-1].x, verticiGrandi[dim - 1][dim/2-1].y, z);
+//		glEnd();
+
+
+//}
+
+void disegnaParete(float a1, float a2,float b, string parete,GLfloat z,int i) {
+
 
 	if(parete=="o"){
 		glBegin(GL_QUADS);
-			glVertex3f(a1, b, z);
-			glVertex3f(a1, b, z+l);
-			glVertex3f(a2, b, z+l);
-			glVertex3f(a2, b, z);
+			glNormal3f(0,i ,0 );
+		glTexCoord2f(0,1);
+		glVertex3f(a1, b, z+l);
+		glTexCoord2f(1,1);
+		glVertex3f(a2, b, z+l);
+		glTexCoord2f(1,0);
+		glVertex3f(a2, b, z);
+		glTexCoord2f(0,0);
+		glVertex3f(a1, b, z);
+
+
+
+
+
 
 		glEnd();
 		/*for(int i=a1;i<=a2;i++)
@@ -420,10 +766,16 @@ void disegnaParete(float a1, float a2,float b, string parete,GLfloat z) {
 
 		}
 	else {
+
 		glBegin(GL_QUADS);
+		glNormal3f(i,0 ,0 );
+			glTexCoord2f(0,0);
 			glVertex3f(b, a1, z);
+			glTexCoord2f(0,1);
 			glVertex3f(b, a1,z+l);
+			glTexCoord2f(1,1);
 			glVertex3f(b, a2, z+l);
+			glTexCoord2f(1,0);
 			glVertex3f(b, a2, z);
 
 		glEnd();
@@ -434,17 +786,35 @@ void disegnaParete(float a1, float a2,float b, string parete,GLfloat z) {
 
 }
 
+void tappi(int z,int k,int o)
+{
+	glBegin(GL_QUADS);
+	glTexCoord2f(0,0);
+	glVertex3f(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].y-l/2,z);
+	glTexCoord2f(1,0);
+	glVertex3f(verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,z);
+	glTexCoord2f(1,1);
+	glVertex3f(verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y+l/2,z);
+	glTexCoord2f(0,1);
+	glVertex3f(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].y+l/2,z);
+
+
+	glEnd();
+
+}
+
 void disengnaLabirinto()
 {
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, verde);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
-	glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
+//	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, verde);
+//	glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
+//	glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
 
 
-glColor3f(0.4,0.-1,0.4);
+//glColor3f(1,1,1);
 int z=0;
 int zmax;
-((alto)?zmax=1:zmax=5);
+((alto)?zmax=1:zmax=4);
+glBindTexture(GL_TEXTURE_2D, textures[1]);
 	for(unsigned int k=0;k<dim;k++)
 		for(unsigned int o=0;o<dim;o++)
 		{
@@ -455,24 +825,18 @@ int zmax;
 				while(z<zmax)
 				{
 
-				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y+l/2,"o",z);
-				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,"o",z);
-				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x-l/2,"v",z);
-				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x+l/2,"v",z);
+				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y+l/2,"o",z,-1);
+				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,"o",z,+1);
+				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x-l/2,"v",z,+1);
+				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x+l/2,"v",z,-1);
 
 
 				z+=l;
 				}
+				tappi(z,k,o);
+				z=0.0;
+				tappi(z,k,o);
 
-				glBegin(GL_QUADS);
-				glVertex3f(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].y-l/2,z);
-				glVertex3f(verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,z);
-				glVertex3f(verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y+l/2,z);
-				glVertex3f(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].y+l/2,z);
-
-
-				glEnd();
-				z=0;
 			}
 
 		}
@@ -542,16 +906,16 @@ int zmax;
 void disegnaStanza() {
 
 	//glColor3f(1, 0, 0);
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, nero);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
-		glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
+//	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, nero);
+//		glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
+//		glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
 
 	if (!alto)
 		disegnaPiano("tetto");
 
 	disegnaPiano("pavimento");
 
-	glColor3f(0, 0, 0);
+	//glColor3f(0, 0, 0);
 
 	//disengnaLabirinto(verticiGrandi);
 	disengnaLabirinto();
@@ -563,60 +927,159 @@ void disegnaStanza() {
 //void glutTimerFunc(unsigned int msec,,0){
 //
 //}
-void rotCube() {
-	rotate = (rotate + 1) % 360;
-//	glPushMatrix();
-//	glTranslatef(coordinate(posTargetX), coordinate(posTargetY), 1);
-//	glRotatef((GLfloat) rotate, 0.0, 0.0, 0.1);
-//
-//	glutSolidCube(3);
-//
-//	glPopMatrix();
-	glutPostRedisplay();
-//	glutTimerFunc(secondi, rotCube, secondi);
 
-}
-void Temp(int secondi)
+void TempoRotazione(int secondi)
 {
+	rotate = (rotate + 1) % 360;
 
-	rotCube();
-	fantasma();
-	glutTimerFunc(secondi, Temp, secondi);
+
+	glutTimerFunc(secondi, TempoRotazione, secondi);
 }
 
 void rimp() {
 	if (di > 0.2) {
 		di -= 0.005;
-		glutSolidCube(di);
-		glutPostRedisplay();
+		//glutSolidCube(di);
+		//glutPostRedisplay();
 		dis = di;
 	} else {
 		if (dis < 0.8)
 			dis += 0.005;
-		glutSolidSphere(dis, 200, 200);
-		glutPostRedisplay();
+		glBindTexture(GL_TEXTURE_2D, textures[3]);
+		glTranslatef((coordinate(posTargetX)), (coordinate(posTargetY)), 1);
+		glRotatef((GLfloat) rotate, 0.0, 0.0, 0.1);
+		GLUquadric * q= gluNewQuadric();
+		gluQuadricTexture(q,true);
+		gluSphere(q,dis,200,200);
+		//glutSolidSphere(dis, 200, 200);
+		//glutPostRedisplay();
 	}
 }
+void TempoFantasma(int sec)
+{
+	muoviFantasma();
+
+		glutTimerFunc(sec, TempoFantasma, sec);
+}
+
+
+
+
 void disegnaCubo() {
 //vinto();
 	glPushMatrix();
 	//glColor3f(1, 1, 1);
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, bianco);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
-		glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
+//	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, bianco);
+//		glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
+//		glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
 
 
 //	if (h == 4) {
 //		rotate = (rotate + 1) % 360;
 //		h = 0;
-//	}
-	glTranslatef((coordinate(posTargetX)), (coordinate(posTargetY)), 1);
-	glRotatef((GLfloat) rotate, 0.0, 0.0, 0.1);
+//	}coordinate(posTargetX))
+
 	if (win) {
 		rimp();
 
-	} else
-		glutSolidCube(di);
+	}
+	{
+		//glutSolidCube(di);
+		alphaCubo -= delta_alpha_cubo;
+
+
+
+
+
+
+
+		glBindTexture(GL_TEXTURE_2D, textures[3]);
+				x1=coordinate(posTargetX)+ cos(((alphaCubo)*pgreco)/180)*di;
+				yh1=coordinate(posTargetY)+ sin(((alphaCubo)*pgreco)/180)*di;
+				x2=coordinate(posTargetX)+ cos(((alphaCubo-180)*pgreco)/180)*di;
+				yh2=coordinate(posTargetY)+sin(((alphaCubo-180) * pgreco)/180)*di;
+				x3=coordinate(posTargetX)+ cos(((alphaCubo-90)*pgreco)/180)*di;
+				yh3=coordinate(posTargetY)+ sin(((alphaCubo-90)*pgreco)/180)*di;
+				x4=coordinate(posTargetX)+ cos(((alphaCubo+90)*pgreco)/180)*di;
+				yh4=coordinate(posTargetY)+sin(((alphaCubo+90) * pgreco)/180)*di;
+
+				GLfloat l1=l-((l/2)*di);
+						GLfloat l2=l+((l/2)*di);
+						glBegin(GL_QUADS);
+								//glNormal3f(0,1 ,1 );
+								glTexCoord2f(1,0);
+								glVertex3f(x1,yh1,l1);
+								glTexCoord2f(1,1);
+								glVertex3f(x1, yh1, l2);
+								glTexCoord2f(0,1);
+								glVertex3f(x3, yh3,l2);
+								glTexCoord2f(0,0);
+								glVertex3f(x3, yh3, l1);
+								glEnd();
+								glBegin(GL_QUADS);
+								//glNormal3f(0,1 ,1 );
+								glTexCoord2f(1,0);
+								glVertex3f(x3,yh3,l1);
+								glTexCoord2f(1,1);
+								glVertex3f(x3, yh3, l2);
+								glTexCoord2f(0,1);
+								glVertex3f(x2, yh2,l2);
+								glTexCoord2f(0,0);
+								glVertex3f(x2, yh2, l1);
+								glEnd();
+
+								glBegin(GL_QUADS);
+								//glNormal3f(0,1 ,1 );
+								glTexCoord2f(0,0);
+								glVertex3f(x2,yh2,l1);
+								glTexCoord2f(0,1);
+								glVertex3f(x2, yh2, l2);
+								glTexCoord2f(1,1);
+								glVertex3f(x4, yh4,l2);
+								glTexCoord2f(1,0);
+								glVertex3f(x4, yh4, l1);
+								glEnd();
+
+								glBegin(GL_QUADS);
+								//glNormal3f(0,1 ,1 );
+								glTexCoord2f(0,0);
+								glVertex3f(x4,yh4,l1);
+								glTexCoord2f(0,1);
+								glVertex3f(x4, yh4, l2);
+								glTexCoord2f(1,1);
+								glVertex3f(x1, yh1,l2);
+								glTexCoord2f(1,0);
+								glVertex3f(x1, yh1, l1);
+								glEnd();
+
+								glBegin(GL_QUADS);
+								//glNormal3f(0,1 ,1 );
+								glTexCoord2f(0,0);
+								glVertex3f(x1,yh1,l2);
+								glTexCoord2f(0,1);
+								glVertex3f(x3, yh3, l2);
+								glTexCoord2f(1,1);
+								glVertex3f(x2, yh2,l2);
+								glTexCoord2f(1,0);
+								glVertex3f(x4, yh4, l2);
+								glEnd();
+
+								glBegin(GL_QUADS);
+								//glNormal3f(0,1 ,1 );
+								glTexCoord2f(0,0);
+								glVertex3f(x1,yh1,l1);
+								glTexCoord2f(0,1);
+								glVertex3f(x3, yh3, l1);
+								glTexCoord2f(1,1);
+								glVertex3f(x2, yh2,l1);
+								glTexCoord2f(1,0);
+								glVertex3f(x4, yh4, l1);
+								glEnd();
+
+
+	}
+
+	glRotatef((GLfloat) rotate, 0.0, 0.0, 0.1);
 	glPopMatrix();
 
 	glutPostRedisplay();
@@ -640,31 +1103,56 @@ void display(void) {
 	disegnaStanza();
 
 	disegnaCubo();
-	stampaFantasma();
+
+		stampaFantasma();
+
+
 	//fantasma();
 	if (alto) {
 
 		//glColor3f(1, 0, 1);
-		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, grigio);
-				glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
-				glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
+//		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, verde);
+//				glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
+//				glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
 
-		if (!alto)
+
+		//if (!alto)
 			glPushMatrix();
-		glTranslatef(poscamx, poscamy, 1);
-		glutSolidSphere(1, 200, 200);
+			glBindTexture(GL_TEXTURE_2D, textures[4]);
+			glTranslatef(poscamx, poscamy, 1);
+			GLUquadric * q= gluNewQuadric();
+			gluQuadricTexture(q,true);
+			gluSphere(q,0.5,200,200);
+
+			glBegin(GL_QUADS);
+			glTexCoord2f(0,0);
+			glVertex3f(-9,-17,l*2);
+			glTexCoord2f(1,0);
+			glVertex3f(-9,-16,l*2);
+			glTexCoord2f(1,1);
+			glVertex3f(lunghezzaBarra/2,-16,l*2);
+			glTexCoord2f(0,1);
+
+			glVertex3f(lunghezzaBarra/2,-17,l*2);
+
+
+			glEnd();
+
 		glPopMatrix();
-		glPushMatrix();
+		//glPushMatrix();
 		//glTranslatef(coordinate(posTargetX),coordinate(posTargetY),1);
 //		glTranslatef(verticiGrandi[posTargetY][posTargetX].x,
 //				verticiGrandi[posTargetY][posTargetX].y, 1);
 //
 //		glutSolidCube(1);
-		glPopMatrix();
+		//glPopMatrix();
 
 	}
 
+
 	glPopMatrix();
+
+
 
 	glutSwapBuffers();
 }
@@ -677,10 +1165,18 @@ bool muro(unsigned int i, unsigned int j) {
 	return false;
 }
 
-bool vicinoCubo(unsigned int intx, unsigned int inty) {
+bool vicinoCubo(int intx,  int inty) {
 	if (intx <= posTargetX + 2 && intx >= posTargetX - 2
 			&& inty <= posTargetY + 2 && inty >= posTargetY - 2)
+		{
+		gioco=false;
+		win = true;
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbiente);
+									glFogfv(GL_FOG_COLOR, coloreNebbia);
+		glutPostRedisplay();
 		return true;
+
+		}
 	return false;
 }
 
@@ -689,8 +1185,10 @@ void spostaInAvanti3D() {
 		cout << collisioneCuboF() << endl;
 		poscamx = nextX();
 		poscamy = nextY();
-		if (vicinoCubo(indice(poscamx), indice(poscamy)))
-			win = true;
+		vicinoCubo(indice(poscamx), indice(poscamy));
+		/*if (vicinoCubo(indice(poscamx), indice(poscamy)))
+			{win = true;
+			glutPostRedisplay();}*/
 	}
 }
 
@@ -715,8 +1213,10 @@ void vaiDietro3D() {
 	if ( !collisioneCuboS()&&!collisioneCuboC()) {
 		poscamx = lastX();
 		poscamy = lastY();
-		if (vicinoCubo(indice(poscamx), indice(poscamy)))
-			win = true;
+		vicinoCubo(indice(poscamx), indice(poscamy));
+		/*if (vicinoCubo(indice(poscamx), indice(poscamy)))
+			{win = true;
+			glutPostRedisplay();}*/
 	}
 }
 
@@ -773,7 +1273,8 @@ void vaiSinistra2D() {
 }
 
 void keyboard(unsigned char key, int x, int y) {
-
+	if(gioco)
+	{
 	switch (key) {
 	case 'd':
 		if (!alto) {
@@ -890,6 +1391,7 @@ void keyboard(unsigned char key, int x, int y) {
 		break;
 
 	}
+	}
 
 }
 void reshape(int w, int h) {
@@ -982,13 +1484,18 @@ int main(int argc, char** argv) {
 	glutInitWindowSize(1300, 710);
 	glutCreateWindow("la PERFEZIONE FATTA PIANO");
 	init();
-	Temp(25);
+	//TempoRotazione(25);
+	Timer(1000);
+	setIngFalse(7000);
+
+	//TempoFantasma(300);
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
 
 	glutReshapeFunc(reshape);
-
+	texture();
 	glutMainLoop();
+	 glDeleteTextures(numTex, textures);
 
 	return 0;
 }
