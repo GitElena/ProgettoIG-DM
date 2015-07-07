@@ -40,45 +40,44 @@ bool alto = false, modalitaSemplice = false, prima = false, seconda = false,
 unsigned int labx, laby; //collisioni 2d
 int posOsservatoreX, posOsservatoreY, posTargetX, posTargetY,posFantasmaX=3,posFantasmaY=3;
 const int dim = 40;
-GLfloat delta_alpha = 3, alpha = 0, pgreco = 3.14159, alphaCubo=0,delta_alpha_cubo=1;
+GLfloat delta_alpha = 3, alpha = 0, pgreco = 3.14159, alphaCubo=0,delta_alpha_cubo=1,zloser=4.0;
 int labirinto[dim][dim] = { 3 };
 GLfloat velocita = 0.1;
 int rotate = 0;
 bool ing=false;
-const int numTex=6;
+const int numTex=7;
 GLuint  textures[numTex];
-const char *textureFile[numTex] = { "src\\erba1.tga", "src\\muroGrigio.tga","src\\stella.tga","src\\cassa.tga","src\\cubo3.tga","src\\Fantasmino2.tga"};
+const char *textureFile[numTex] = { "src\\erba1.tga", "src\\muroGrigio.tga","src\\stella.tga","src\\cassa.tga","src\\cubo3.tga","src\\Fantasmino2.tga","src\\vittori.tga"};
 const int tempTot=300;
 int tempRimanente=tempTot;
 GLfloat lunghezzaBarra=18.0;
 GLfloat decrementoBarra=(lunghezzaBarra/tempTot)*2;
-bool gioco=true,presoFantasma=false;
+bool gioco=true,presoFantasma=false,loser=false;
 
 GLfloat x1=0,x2=0,x3=0,x4=0;
 
 GLfloat yh1=0,yh2=0,yh3=0,yh4=0;
 
-GLfloat ambientLight [] = { 0 , 0 , 3 , 1.0f };
-GLfloat coloreLuceAmbiente[] = { 0.5, 0.5, 0.5, 1.0f };
+GLfloat coloreLuceAmbiente[] = { 0.1, 0.1, 0.1, 1.0f };
 //GLfloat coloreLuceAmbiente[] = { 0.0, 0.0, 0.0, 0.5f };
 GLfloat luceDiffusa[] = { 0.5, 0.5, 0.5, 1.0 };
 GLfloat luceSpeculare[] = { 0.5, 0.5, 0.5, 1.0 };
-GLfloat reflex[] = { 50.0 };
+GLfloat reflex[] = { 0.0 };
 GLfloat grigioBello[] = { 0.2, 0.2, 0.2, 1.0 };
-GLfloat marrone[]= { 0.2, 0.2, 0.0, 1.0 };
-GLfloat senape[]= { 0.4, 0.4, 0.0, 1.0 };
+//GLfloat marrone[]= { 0.2, 0.2, 0.0, 1.0 };
+//GLfloat senape[]= { 0.4, 0.4, 0.0, 1.0 };
 GLfloat rouge[]= { 0.5, 0.1, 0.0, 1.0 };
 GLfloat Speculare[] = { 0, 0, 0, 1.0 };
 GLfloat nero[] = { 0, 0, 0, 1 };
 GLfloat bianco[] = { 1, 1, 1, 1 };
 GLfloat verde[] = { 0, 1, 0, 1 };
-GLfloat grigio[] = { 1, 0, 1, 1 };
+//GLfloat grigio[] = { 1, 0, 1, 1 };
 //GLfloat coloreNebbia[] = { 0.3, 0.3, 0.3, 1 };
-GLfloat coloreNebbia[] = { 0.6, 0.6, 0.6, 0 };
-GLfloat PosLuceAmbiente[] = {10, 10,4, 1.0 };
+GLfloat coloreNebbia[] = { 0.4, 0.4, 0.4, 0 };
+GLfloat PosLuceAmbiente[] = {10, 10,10, 1.0 };
 
 
-GLfloat PosLuceAmbienteF[] = {-10, -10,2, 1.0 };
+GLfloat coloreLuceAmbienteTicToc[] = {-0.5, -0.5,1, 1.0 };
 GLfloat PosLuceAmbiente2[] = { 40, 40,10, 1.0 };
 void ingFantasma();
 void collisioneFantasma();
@@ -96,14 +95,18 @@ Vertice verticiGrandi[dim][dim] = { 0.0 };
 GLfloat l = 1;
 
 void init(void) {
-	glClearColor(0.6, 0.6, 0.6, 0);
+	glClearColor(0.4, 0.4, 0.4, 0);
 
 	glEnable(GL_LIGHTING);
 
+	glShadeModel(GL_SMOOTH);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_NORMALIZE);
 		glLightfv(GL_LIGHT0, GL_AMBIENT, coloreLuceAmbiente);
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, luceDiffusa);
 		glLightfv(GL_LIGHT0, GL_SPECULAR, luceSpeculare);
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbiente);
+//		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbiente);
+		glLightfv(GL_LIGHT0, GL_POSITION, PosLuceAmbiente);
 
 		glEnable(GL_LIGHT0);
 
@@ -116,11 +119,10 @@ void init(void) {
 		glFogf(GL_FOG_START,-2);
 		glFogf(GL_FOG_END, 11);
 		glFogi(GL_FOG_MODE, GL_LINEAR);
-		glEnable(GL_FOG);
+		//glEnable(GL_FOG);
 
-
-	glShadeModel(GL_FLAT);
-	glEnable(GL_DEPTH_TEST);
+		glEnable(GL_COLOR_MATERIAL);
+		glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
 
 }
 
@@ -166,14 +168,25 @@ void Timer(int sec)
 	if(tempRimanente>0)
 	{	tempRimanente--;
 	lunghezzaBarra-=decrementoBarra;}
-	else gioco=false;
+	else
+		{gioco=false;
+		loser=true;}
 
 	if(tempRimanente==30)
 	{
-			glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbienteF);
+		glLightfv(GL_LIGHT0, GL_AMBIENT, coloreLuceAmbienteTicToc);
+			//glLightModelfv(GL_LIGHT_MODEL_AMBIENT, PosLuceAmbienteF);
 				glFogfv(GL_FOG_COLOR, rouge);
 	}
 	glutTimerFunc(sec,Timer,sec);
+}
+
+void abbassaMuri(int sec )
+{	if(loser)
+		if(zloser>0)
+			zloser--;
+
+	glutTimerFunc(sec,abbassaMuri,sec);
 }
 
 void muoviFantasma()
@@ -678,12 +691,15 @@ void disegnaPiano(string tipo) {
 	glBindTexture(GL_TEXTURE_2D, textures[g]);
 //	glBindTexture(GL_TEXTURE_2D, textures[g]);
 	//if(tipo!="tetto")
+	int i;
+	((z>0)? i=-1: i=1);
 	for(int q=0;q<dim;q++)
 	{
 		for(int p=0;p<dim;p++)
 		{
-			if(labirinto[q][p]!=1){
+			if(labirinto[q][p]!=1||loser){
 					glBegin(GL_QUADS);
+					glNormal3f(0,0,i);
 					glTexCoord2f(0,0);
 					glVertex3f(verticiGrandi[q][p].x-l/2,verticiGrandi[q][p].y-l/2,z);
 					glTexCoord2f(1,0);
@@ -789,7 +805,9 @@ void disegnaParete(float a1, float a2,float b, string parete,GLfloat z,int i) {
 void tappi(int z,int k,int o)
 {
 	glBegin(GL_QUADS);
+	glNormal3f(0,0,1);
 	glTexCoord2f(0,0);
+
 	glVertex3f(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].y-l/2,z);
 	glTexCoord2f(1,0);
 	glVertex3f(verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,z);
@@ -814,6 +832,9 @@ void disengnaLabirinto()
 int z=0;
 int zmax;
 ((alto)?zmax=1:zmax=4);
+if(loser)
+{
+	zmax=zloser;}
 glBindTexture(GL_TEXTURE_2D, textures[1]);
 	for(unsigned int k=0;k<dim;k++)
 		for(unsigned int o=0;o<dim;o++)
@@ -825,10 +846,10 @@ glBindTexture(GL_TEXTURE_2D, textures[1]);
 				while(z<zmax)
 				{
 
-				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y+l/2,"o",z,-1);
-				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,"o",z,+1);
-				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x-l/2,"v",z,+1);
-				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x+l/2,"v",z,-1);
+				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y+l/2,"o",z,+1);
+				disegnaParete(verticiGrandi[k][o].x-l/2,verticiGrandi[k][o].x+l/2,verticiGrandi[k][o].y-l/2,"o",z,-1);
+				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x-l/2,"v",z,-1);
+				disegnaParete(verticiGrandi[k][o].y+l/2,verticiGrandi[k][o].y-l/2,verticiGrandi[k][o].x+l/2,"v",z,+1);
 
 
 				z+=l;
@@ -840,6 +861,9 @@ glBindTexture(GL_TEXTURE_2D, textures[1]);
 			}
 
 		}
+
+	if(loser)
+		glutPostRedisplay();
 
 //	unsigned int rigaVertice,colonnaVertice1,colonnaVertice2;
 //	for(unsigned int i=0;i<dim-1;i++)
@@ -918,7 +942,9 @@ void disegnaStanza() {
 	//glColor3f(0, 0, 0);
 
 	//disengnaLabirinto(verticiGrandi);
+
 	disengnaLabirinto();
+
 
 }
 
@@ -930,24 +956,117 @@ void disegnaStanza() {
 
 void TempoRotazione(int secondi)
 {
-	rotate = (rotate + 1) % 360;
+	rotate = (rotate +2) % 360;
 
 
 	glutTimerFunc(secondi, TempoRotazione, secondi);
 }
 
+
+void disegnaCubo(int  i)
+{
+
+					GLfloat h=l/2;
+					x1=h*di;
+					yh1=(-1*h)*di;
+					x2=(-1*h)*di;
+					yh2=(h)*di;
+					x3=(-1*h)*di;
+					yh3=(-1*h)*di;
+					x4=h*di;
+					yh4=h*di;
+					glBindTexture(GL_TEXTURE_2D, textures[i]);
+
+					GLfloat l1=l-(h*di);
+							GLfloat l2=l+(h*di);
+							glBegin(GL_QUADS);
+									glNormal3f(-1,0, 0 );
+									glTexCoord2f(1,0);
+									glVertex3f(x1,yh1,l1);
+									glTexCoord2f(1,1);
+									glVertex3f(x1, yh1, l2);
+									glTexCoord2f(0,1);
+									glVertex3f(x3, yh3,l2);
+									glTexCoord2f(0,0);
+									glVertex3f(x3, yh3, l1);
+									glEnd();
+									glBegin(GL_QUADS);
+									glNormal3f(0,1 ,0 );
+									glTexCoord2f(1,0);
+									glVertex3f(x3,yh3,l1);
+									glTexCoord2f(1,1);
+									glVertex3f(x3, yh3, l2);
+									glTexCoord2f(0,1);
+									glVertex3f(x2, yh2,l2);
+									glTexCoord2f(0,0);
+									glVertex3f(x2, yh2, l1);
+									glEnd();
+
+									glBegin(GL_QUADS);
+									glNormal3f(0,-1 ,0 );
+									glTexCoord2f(0,0);
+									glVertex3f(x2,yh2,l1);
+									glTexCoord2f(0,1);
+									glVertex3f(x2, yh2, l2);
+									glTexCoord2f(1,1);
+									glVertex3f(x4, yh4,l2);
+									glTexCoord2f(1,0);
+									glVertex3f(x4, yh4, l1);
+									glEnd();
+
+									glBegin(GL_QUADS);
+									glNormal3f(-1,0 ,0 );
+									glTexCoord2f(0,0);
+									glVertex3f(x4,yh4,l1);
+									glTexCoord2f(0,1);
+									glVertex3f(x4, yh4, l2);
+									glTexCoord2f(1,1);
+									glVertex3f(x1, yh1,l2);
+									glTexCoord2f(1,0);
+									glVertex3f(x1, yh1, l1);
+									glEnd();
+
+									glBegin(GL_QUADS);
+								    glNormal3f(0,0 ,1 );
+									glTexCoord2f(0,0);
+									glVertex3f(x1,yh1,l2);
+									glTexCoord2f(0,1);
+									glVertex3f(x3, yh3, l2);
+									glTexCoord2f(1,1);
+									glVertex3f(x2, yh2,l2);
+									glTexCoord2f(1,0);
+									glVertex3f(x4, yh4, l2);
+									glEnd();
+
+									glBegin(GL_QUADS);
+									glNormal3f(0,0 ,-1 );
+									glTexCoord2f(0,0);
+									glVertex3f(x1,yh1,l1);
+									glTexCoord2f(0,1);
+									glVertex3f(x3, yh3, l1);
+									glTexCoord2f(1,1);
+									glVertex3f(x2, yh2,l1);
+									glTexCoord2f(1,0);
+									glVertex3f(x4, yh4, l1);
+									glEnd();
+
+}
+
 void rimp() {
 	if (di > 0.2) {
 		di -= 0.005;
+		disegnaCubo(3);
 		//glutSolidCube(di);
 		//glutPostRedisplay();
 		dis = di;
 	} else {
 		if (dis < 0.8)
 			dis += 0.005;
-		glBindTexture(GL_TEXTURE_2D, textures[3]);
-		glTranslatef((coordinate(posTargetX)), (coordinate(posTargetY)), 1);
-		glRotatef((GLfloat) rotate, 0.0, 0.0, 0.1);
+		glBindTexture(GL_TEXTURE_2D, textures[6]);
+
+	glTranslatef(0,0, 1);
+//		glRotatef(GLfloat(rotate), 0.0, 0.0, 0.1);
+
 		GLUquadric * q= gluNewQuadric();
 		gluQuadricTexture(q,true);
 		gluSphere(q,dis,200,200);
@@ -965,7 +1084,7 @@ void TempoFantasma(int sec)
 
 
 
-void disegnaCubo() {
+void gestisciCubo() {
 //vinto();
 	glPushMatrix();
 	//glColor3f(1, 1, 1);
@@ -978,108 +1097,29 @@ void disegnaCubo() {
 //		rotate = (rotate + 1) % 360;
 //		h = 0;
 //	}coordinate(posTargetX))
+//	glRotatef(0.0, 0.0, (GLfloat) rotate, 0.1);
+		glTranslatef((coordinate(posTargetX)), (coordinate(posTargetY)), 0);
+		glRotatef(GLfloat(rotate), 0.0, 0.0, -0.1);
 
 	if (win) {
 		rimp();
 
 	}
-	{
+	else{
+
+		disegnaCubo(3);
 		//glutSolidCube(di);
-		alphaCubo -= delta_alpha_cubo;
+		//alphaCubo -= delta_alpha_cubo;
 
 
 
 
 
 
-
-		glBindTexture(GL_TEXTURE_2D, textures[3]);
-				x1=coordinate(posTargetX)+ cos(((alphaCubo)*pgreco)/180)*di;
-				yh1=coordinate(posTargetY)+ sin(((alphaCubo)*pgreco)/180)*di;
-				x2=coordinate(posTargetX)+ cos(((alphaCubo-180)*pgreco)/180)*di;
-				yh2=coordinate(posTargetY)+sin(((alphaCubo-180) * pgreco)/180)*di;
-				x3=coordinate(posTargetX)+ cos(((alphaCubo-90)*pgreco)/180)*di;
-				yh3=coordinate(posTargetY)+ sin(((alphaCubo-90)*pgreco)/180)*di;
-				x4=coordinate(posTargetX)+ cos(((alphaCubo+90)*pgreco)/180)*di;
-				yh4=coordinate(posTargetY)+sin(((alphaCubo+90) * pgreco)/180)*di;
-
-				GLfloat l1=l-((l/2)*di);
-						GLfloat l2=l+((l/2)*di);
-						glBegin(GL_QUADS);
-								//glNormal3f(0,1 ,1 );
-								glTexCoord2f(1,0);
-								glVertex3f(x1,yh1,l1);
-								glTexCoord2f(1,1);
-								glVertex3f(x1, yh1, l2);
-								glTexCoord2f(0,1);
-								glVertex3f(x3, yh3,l2);
-								glTexCoord2f(0,0);
-								glVertex3f(x3, yh3, l1);
-								glEnd();
-								glBegin(GL_QUADS);
-								//glNormal3f(0,1 ,1 );
-								glTexCoord2f(1,0);
-								glVertex3f(x3,yh3,l1);
-								glTexCoord2f(1,1);
-								glVertex3f(x3, yh3, l2);
-								glTexCoord2f(0,1);
-								glVertex3f(x2, yh2,l2);
-								glTexCoord2f(0,0);
-								glVertex3f(x2, yh2, l1);
-								glEnd();
-
-								glBegin(GL_QUADS);
-								//glNormal3f(0,1 ,1 );
-								glTexCoord2f(0,0);
-								glVertex3f(x2,yh2,l1);
-								glTexCoord2f(0,1);
-								glVertex3f(x2, yh2, l2);
-								glTexCoord2f(1,1);
-								glVertex3f(x4, yh4,l2);
-								glTexCoord2f(1,0);
-								glVertex3f(x4, yh4, l1);
-								glEnd();
-
-								glBegin(GL_QUADS);
-								//glNormal3f(0,1 ,1 );
-								glTexCoord2f(0,0);
-								glVertex3f(x4,yh4,l1);
-								glTexCoord2f(0,1);
-								glVertex3f(x4, yh4, l2);
-								glTexCoord2f(1,1);
-								glVertex3f(x1, yh1,l2);
-								glTexCoord2f(1,0);
-								glVertex3f(x1, yh1, l1);
-								glEnd();
-
-								glBegin(GL_QUADS);
-								//glNormal3f(0,1 ,1 );
-								glTexCoord2f(0,0);
-								glVertex3f(x1,yh1,l2);
-								glTexCoord2f(0,1);
-								glVertex3f(x3, yh3, l2);
-								glTexCoord2f(1,1);
-								glVertex3f(x2, yh2,l2);
-								glTexCoord2f(1,0);
-								glVertex3f(x4, yh4, l2);
-								glEnd();
-
-								glBegin(GL_QUADS);
-								//glNormal3f(0,1 ,1 );
-								glTexCoord2f(0,0);
-								glVertex3f(x1,yh1,l1);
-								glTexCoord2f(0,1);
-								glVertex3f(x3, yh3, l1);
-								glTexCoord2f(1,1);
-								glVertex3f(x2, yh2,l1);
-								glTexCoord2f(1,0);
-								glVertex3f(x4, yh4, l1);
-								glEnd();
 
 
 	}
 
-	glRotatef((GLfloat) rotate, 0.0, 0.0, 0.1);
 	glPopMatrix();
 
 	glutPostRedisplay();
@@ -1088,6 +1128,11 @@ void disegnaCubo() {
 
 void display(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, bianco);
+//				glMaterialfv(GL_FRONT, GL_SPECULAR, Speculare);
+//				glMaterialfv(GL_FRONT, GL_SHININESS, reflex);
+
 
 	glPushMatrix();
 
@@ -1102,7 +1147,7 @@ void display(void) {
 
 	disegnaStanza();
 
-	disegnaCubo();
+	gestisciCubo();
 
 		stampaFantasma();
 
@@ -1149,6 +1194,7 @@ void display(void) {
 
 	}
 
+//
 
 	glPopMatrix();
 
@@ -1273,9 +1319,10 @@ void vaiSinistra2D() {
 }
 
 void keyboard(unsigned char key, int x, int y) {
-	if(gioco)
-	{
+if(gioco){
 	switch (key) {
+
+
 	case 'd':
 		if (!alto) {
 			alpha -= delta_alpha;
@@ -1295,6 +1342,10 @@ void keyboard(unsigned char key, int x, int y) {
 		glutPostRedisplay();
 
 		break;
+	case 'f':
+		glutFullScreen();
+		break;
+
 	case 'a':
 
 		if (!alto)
@@ -1391,7 +1442,12 @@ void keyboard(unsigned char key, int x, int y) {
 		break;
 
 	}
-	}
+}
+	if(key== 27)
+		exit(0);
+
+	cout<<"x"<<poscamx<<"y"<<poscamy<<endl;
+
 
 }
 void reshape(int w, int h) {
@@ -1484,7 +1540,9 @@ int main(int argc, char** argv) {
 	glutInitWindowSize(1300, 710);
 	glutCreateWindow("la PERFEZIONE FATTA PIANO");
 	init();
-	//TempoRotazione(25);
+
+		abbassaMuri(1000);
+	TempoRotazione(25);
 	Timer(1000);
 	setIngFalse(7000);
 
